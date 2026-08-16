@@ -14,6 +14,7 @@ import {
 } from "@/lib/ensure-tool-responses";
 // import { LangGraphLogoSVG } from "../icons/langgraph";
 import { TooltipIconButton } from "./tooltip-icon-button";
+import { ThemeToggle } from "../ui/theme-toggle";
 import {
   ArrowDown,
   LoaderCircle,
@@ -208,7 +209,7 @@ export function Thread() {
     <div className="flex w-full h-screen overflow-hidden">
       <div className="relative lg:flex hidden">
         <motion.div
-          className="absolute h-full border-r bg-white overflow-hidden z-20"
+          className="absolute h-full border-r bg-background overflow-hidden z-20"
           style={{ width: 300 }}
           animate={
             isLargeScreen
@@ -252,7 +253,7 @@ export function Thread() {
             <div>
               {(!chatHistoryOpen || !isLargeScreen) && (
                 <Button
-                  className="hover:bg-gray-100"
+                  className="hover:bg-muted"
                   variant="ghost"
                   onClick={() => setChatHistoryOpen((p) => !p)}
                 >
@@ -264,9 +265,9 @@ export function Thread() {
                 </Button>
               )}
             </div>
-            {/* <div className="absolute top-2 right-4 flex items-center">
-              <OpenGitHubRepo />
-            </div> */}
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+            </div>
           </div>
         )}
         {chatStarted && (
@@ -275,7 +276,7 @@ export function Thread() {
               <div className="absolute left-0 z-10">
                 {(!chatHistoryOpen || !isLargeScreen) && (
                   <Button
-                    className="hover:bg-gray-100"
+                    className="hover:bg-muted"
                     variant="ghost"
                     onClick={() => setChatHistoryOpen((p) => !p)}
                   >
@@ -307,9 +308,7 @@ export function Thread() {
             </div>
 
             <div className="flex items-center gap-4">
-              {/* <div className="flex items-center">
-                <OpenGitHubRepo />
-              </div> */}
+              <ThemeToggle />
               <TooltipIconButton
                 size="lg"
                 className="p-4"
@@ -328,7 +327,7 @@ export function Thread() {
         <StickToBottom className="relative flex-1 overflow-hidden">
           <StickyToBottomContent
             className={cn(
-              "absolute px-4 inset-0 overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent",
+              "absolute px-4 inset-0 overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent",
               !chatStarted && "flex flex-col items-stretch mt-[25vh]",
               chatStarted && "grid grid-rows-[1fr_auto]",
             )}
@@ -369,7 +368,7 @@ export function Thread() {
               </>
             }
             footer={
-              <div className="sticky flex flex-col items-center gap-8 bottom-0 bg-white">
+              <div className="sticky flex flex-col items-center gap-8 bottom-0 bg-background">
                 {!chatStarted && (
                   <div className="flex gap-3 items-center">
                     {/* <LangGraphLogoSVG className="flex-shrink-0 h-8" /> */}
@@ -416,7 +415,7 @@ export function Thread() {
                           />
                           <Label
                             htmlFor="render-tool-calls"
-                            className="text-sm text-gray-600"
+                            className="text-sm text-muted-foreground"
                           >
                             Hide Tool Calls
                           </Label>

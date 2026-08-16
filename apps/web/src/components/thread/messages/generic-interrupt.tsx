@@ -55,14 +55,14 @@ export function GenericInterruptView({
   const displayEntries = processEntries();
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="bg-muted px-4 py-2 border-b border-border">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h3 className="font-medium text-gray-900">Human Interrupt</h3>
+          <h3 className="font-medium text-foreground">Human Interrupt</h3>
         </div>
       </div>
       <motion.div
-        className="min-w-full bg-gray-100"
+        className="min-w-full bg-muted"
         initial={false}
         animate={{ height: "auto" }}
         transition={{ duration: 0.3 }}
@@ -80,20 +80,20 @@ export function GenericInterruptView({
                 overflow: "auto",
               }}
             >
-              <table className="min-w-full divide-y divide-gray-200">
-                <tbody className="divide-y divide-gray-200">
+              <table className="min-w-full divide-y divide-border">
+                <tbody className="divide-y divide-border">
                   {displayEntries.map((item, argIdx) => {
                     const [key, value] = Array.isArray(interrupt)
                       ? [argIdx.toString(), item]
                       : (item as [string, any]);
                     return (
                       <tr key={argIdx}>
-                        <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">
+                        <td className="px-4 py-2 text-sm font-medium text-foreground whitespace-nowrap">
                           {key}
                         </td>
-                        <td className="px-4 py-2 text-sm text-gray-500">
+                        <td className="px-4 py-2 text-sm text-muted-foreground">
                           {isComplexValue(value) ? (
-                            <code className="bg-gray-50 rounded px-2 py-1 font-mono text-sm">
+                            <code className="bg-muted rounded px-2 py-1 font-mono text-sm">
                               {JSON.stringify(value, null, 2)}
                             </code>
                           ) : (
@@ -112,7 +112,7 @@ export function GenericInterruptView({
           (Array.isArray(interrupt) && interrupt.length > 5)) && (
           <motion.button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full py-2 flex items-center justify-center border-t-[1px] border-gray-200 text-gray-500 hover:text-gray-600 hover:bg-gray-50 transition-all ease-in-out duration-200 cursor-pointer"
+            className="w-full py-2 flex items-center justify-center border-t-[1px] border-border text-muted-foreground hover:text-muted-foreground hover:bg-muted transition-all ease-in-out duration-200 cursor-pointer"
             initial={{ scale: 1 }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
