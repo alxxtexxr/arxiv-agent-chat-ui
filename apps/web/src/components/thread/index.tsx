@@ -14,13 +14,15 @@ import {
 } from "@/lib/ensure-tool-responses";
 // import { LangGraphLogoSVG } from "../icons/langgraph";
 import { TooltipIconButton } from "./tooltip-icon-button";
-import { ThemeToggle } from "../ui/theme-toggle";
+import { useTheme } from "@/providers/ThemeProvider";
 import {
   ArrowDown,
   LoaderCircle,
+  Moon,
   PanelRightOpen,
   PanelRightClose,
   SquarePen,
+  Sun,
 } from "lucide-react";
 import { useQueryState, parseAsBoolean } from "nuqs";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
@@ -97,6 +99,7 @@ function ScrollToBottom(props: { className?: string }) {
 // }
 
 export function Thread() {
+  const { theme, toggleTheme } = useTheme();
   const [threadId, setThreadId] = useQueryState("threadId");
   const [chatHistoryOpen, setChatHistoryOpen] = useQueryState(
     "chatHistoryOpen",
@@ -266,7 +269,18 @@ export function Thread() {
               )}
             </div>
             <div className="flex items-center gap-4">
-              <ThemeToggle />
+              <TooltipIconButton
+                tooltip="Toggle theme"
+                size="lg"
+                className="p-4"
+                onClick={toggleTheme}
+              >
+                {theme === "dark" ? (
+                  <Sun className="size-5" />
+                ) : (
+                  <Moon className="size-5" />
+                )}
+              </TooltipIconButton>
             </div>
           </div>
         )}
@@ -308,7 +322,18 @@ export function Thread() {
             </div>
 
             <div className="flex items-center gap-4">
-              <ThemeToggle />
+              <TooltipIconButton
+                tooltip="Toggle theme"
+                size="lg"
+                className="p-4"
+                onClick={toggleTheme}
+              >
+                {theme === "dark" ? (
+                  <Sun className="size-5" />
+                ) : (
+                  <Moon className="size-5" />
+                )}
+              </TooltipIconButton>
               <TooltipIconButton
                 size="lg"
                 className="p-4"
