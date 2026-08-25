@@ -6,15 +6,6 @@
   font-size: 0.9em;
 }
 
-.markdown-content a {
-  color: #0070f3;
-  text-decoration: none;
-}
-
-.markdown-content a:hover {
-  text-decoration: underline;
-}
-
 .markdown-content blockquote {
   border-left: 4px solid #ddd;
   padding-left: 1rem;
