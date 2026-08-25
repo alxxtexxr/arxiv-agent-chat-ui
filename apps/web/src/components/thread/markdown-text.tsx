@@ -120,7 +120,7 @@ const defaultComponents: any = {
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "text-primary font-medium underline underline-offset-4 hover:no-underline",
+        "text-primary font-medium cursor-pointer underline underline-offset-4 hover:no-underline",
         className,
       )}
       {...props}
