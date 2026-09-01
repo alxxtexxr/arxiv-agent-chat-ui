@@ -3,7 +3,7 @@
   "author": "Your Name",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"turbo dev --filter=web\" \"turbo dev --filter=agents\"",
+    "dev": "turbo dev --filter=web",
     "build": "turbo build",
     "turbo:command": "turbo",
     "format": "turbo format",
@@ -15,7 +15,6 @@
     "tsx": "^4.19.1",
     "typescript": "^5",
     "eslint": "^9.19.0",
-    "concurrently": "^9.1.2",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@eslint/eslintrc": "^3.3.0",
     "@typescript-eslint/parser": "^8.26.1",
