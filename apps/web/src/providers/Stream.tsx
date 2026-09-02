@@ -257,7 +257,11 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
   }
 
   return (
-    <StreamSession apiKey={apiKey} apiUrl={apiUrl} assistantId={assistantId}>
+    <StreamSession
+      apiKey={apiKey}
+      apiUrl={finalApiUrl}
+      assistantId={finalAssistantId}
+    >
       {children}
     </StreamSession>
   );
