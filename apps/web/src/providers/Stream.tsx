@@ -151,9 +151,11 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
     _setApiKey(key);
   };
 
-  // Determine final values to use, prioritizing URL params then env vars
-  const finalApiUrl = apiUrl || envApiUrl;
-  const finalAssistantId = assistantId || envAssistantId;
+  // Determine final values to use, prioritizing URL params, env vars, then localStorage
+  const storedApiUrl = localStorage.getItem("lg:chat:apiUrl");
+  const storedAssistantId = localStorage.getItem("lg:chat:assistantId");
+  const finalApiUrl = apiUrl || envApiUrl || storedApiUrl;
+  const finalAssistantId = assistantId || envAssistantId || storedAssistantId;
 
   // If we're missing any required values, show the form
   if (!finalApiUrl || !finalAssistantId) {
