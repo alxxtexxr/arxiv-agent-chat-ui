@@ -1,9 +1,8 @@
 import React, { ReactNode, useState, useEffect, useCallback } from "react";
 import { useQueryState } from "nuqs";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { ArrowRight, Loader2 } from "lucide-react";
-import { PasswordInput } from "@/components/ui/password-input";
+import { Input } from "@/components/ui/input";
 import { storeAccessKey } from "@/lib/access-key";
 
 const INSTANCE_CONTROL_BASE =
@@ -202,7 +201,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
       <div className="flex items-center justify-center min-h-screen w-full p-4">
         <div className="animate-in fade-in-0 zoom-in-95 flex flex-col border bg-background shadow-lg rounded-lg max-w-3xl">
-          <div className="flex flex-col gap-2 mt-14 p-6 border-b">
+          <div className="flex flex-col gap-2 p-6 border-b">
             <div className="flex items-start flex-col gap-2">
               <h1 className="text-xl font-semibold tracking-tight">
                 arXiv Agent
@@ -284,7 +283,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
   return (
     <div className="flex items-center justify-center min-h-screen w-full p-4">
       <div className="animate-in fade-in-0 zoom-in-95 flex flex-col border bg-background shadow-lg rounded-lg max-w-3xl">
-        <div className="flex flex-col gap-2 mt-14 p-6 border-b">
+        <div className="flex flex-col gap-2 p-6 border-b">
           <div className="flex items-start flex-col gap-2">
             <h1 className="text-xl font-semibold tracking-tight">
               arXiv Agent
@@ -299,10 +298,13 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
           className="flex flex-col gap-6 p-6 bg-muted/50"
         >
           <div className="flex flex-col gap-2">
-            <Label htmlFor="accessKey">
+            <label
+              htmlFor="accessKey"
+              className="text-sm leading-none font-medium"
+            >
               Access Key<span className="text-rose-500">*</span>
-            </Label>
-            <PasswordInput
+            </label>
+            <Input
               id="accessKey"
               name="accessKey"
               className="bg-background"
