@@ -1,7 +1,6 @@
 import React, { ReactNode, useState, useEffect, useCallback } from "react";
 import { useQueryState } from "nuqs";
 import { Button } from "@/components/ui/button";
-import { LangGraphLogoSVG } from "@/components/icons/langgraph";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -205,9 +204,8 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         <div className="animate-in fade-in-0 zoom-in-95 flex flex-col border bg-background shadow-lg rounded-lg max-w-3xl">
           <div className="flex flex-col gap-2 mt-14 p-6 border-b">
             <div className="flex items-start flex-col gap-2">
-              <LangGraphLogoSVG className="h-7" />
               <h1 className="text-xl font-semibold tracking-tight">
-                Agent Chat
+                arXiv Agent
               </h1>
             </div>
             <p className="text-muted-foreground">
@@ -288,8 +286,9 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       <div className="animate-in fade-in-0 zoom-in-95 flex flex-col border bg-background shadow-lg rounded-lg max-w-3xl">
         <div className="flex flex-col gap-2 mt-14 p-6 border-b">
           <div className="flex items-start flex-col gap-2">
-            <LangGraphLogoSVG className="h-7" />
-            <h1 className="text-xl font-semibold tracking-tight">Agent Chat</h1>
+            <h1 className="text-xl font-semibold tracking-tight">
+              arXiv Agent
+            </h1>
           </div>
           <p className="text-muted-foreground">
             Enter your access key to continue.
