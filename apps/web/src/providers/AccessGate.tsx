@@ -5,6 +5,7 @@ import { LangGraphLogoSVG } from "@/components/icons/langgraph";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
+import { storeAccessKey } from "@/lib/access-key";
 
 const INSTANCE_CONTROL_BASE =
   "https://instance-control-api.alimtegar404.workers.dev/v1/instances/arxiv-agent";
@@ -37,11 +38,21 @@ function getApiKeyHeader(): Record<string, string> {
 
 function getAllowedKeys(): string[] {
   const raw = import.meta.env.VITE_ALLOWED_KEYS as string | undefined;
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((k) => k.trim())
-    .filter(Boolean);
+  const admin = import.meta.env.VITE_ADMIN_KEYS as string | undefined;
+  const keys = new Set<string>();
+  if (raw)
+    raw
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean)
+      .forEach((k) => keys.add(k));
+  if (admin)
+    admin
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean)
+      .forEach((k) => keys.add(k));
+  return [...keys];
 }
 
 function getKeyFromUrl(): string | null {
@@ -261,6 +272,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       setWarmMessage("Starting services…");
       await waitForLangGraph(publicIp, (msg) => setWarmMessage(msg));
 
+      storeAccessKey(accessKey);
       goToChat(publicIp);
       setUrlKey(null);
     } catch (err: any) {

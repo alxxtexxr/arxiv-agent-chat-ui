@@ -28,6 +28,8 @@ import { useQueryState, parseAsBoolean } from "nuqs";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import ThreadHistory from "./history";
 import { toast } from "sonner";
+import { StopInstanceButton } from "@/components/StopInstanceButton";
+import { isAdminKey } from "@/lib/access-key";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
@@ -269,6 +271,7 @@ export function Thread() {
               )}
             </div>
             <div className="flex items-center gap-4">
+              {isAdminKey() && <StopInstanceButton />}
               <TooltipIconButton
                 tooltip="Toggle theme"
                 size="lg"
@@ -322,6 +325,7 @@ export function Thread() {
             </div>
 
             <div className="flex items-center gap-4">
+              {isAdminKey() && <StopInstanceButton />}
               <TooltipIconButton
                 tooltip="Toggle theme"
                 size="lg"
