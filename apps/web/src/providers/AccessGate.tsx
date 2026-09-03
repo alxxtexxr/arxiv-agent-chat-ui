@@ -13,7 +13,7 @@ const BACKEND_PORT = import.meta.env.VITE_BACKEND_PORT || "2024";
 const POLL_INTERVAL_MS = 5_000;
 const MAX_POLL_ATTEMPTS = 60; // 5 min max
 const WARMUP_DELAY_MS = 5_000; // wait for systemd services after instance runs
-const WARMUP_POLL_MS = 3_000;
+const WARMUP_POLL_MS = 20_000;
 const WARMUP_MAX_ATTEMPTS = 30; // 90s max for services to start
 
 function getStoredApiUrl(): string | null {
@@ -145,7 +145,7 @@ function usePreStart(keyFromUrl: string | null) {
   }, [keyFromUrl]);
 }
 
-type GatePhase = "idle" | "checking" | "waiting" | "warming";
+type GatePhase = "idle" | "checking" | "preparing" | "waiting" | "warming";
 
 export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [storedUrl, setStoredUrl] = useState<string | null>(getStoredApiUrl);
@@ -195,14 +195,14 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       <div className="flex items-center justify-center min-h-screen w-full p-4">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">Checking session…</p>
+          <p className="text-muted-foreground">Preparing…</p>
         </div>
       </div>
     );
   }
 
   // Waiting for instance to reach "running" or services to warm up
-  if (phase === "waiting" || phase === "warming") {
+  if (phase === "preparing" || phase === "waiting" || phase === "warming") {
     return (
       <div className="flex items-center justify-center min-h-screen w-full p-4">
         <div className="animate-in fade-in-0 zoom-in-95 flex flex-col border bg-background shadow-lg rounded-lg max-w-3xl">
@@ -219,13 +219,15 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
           <div className="flex flex-col items-center gap-4 p-10 bg-muted/50">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              {phase === "warming"
-                ? warmMessage || "Almost ready…"
-                : instanceState === "pending"
-                  ? "Setting up…"
-                  : instanceState === "stopping"
-                    ? "Shutting down previous session…"
-                    : "Setting up…"}
+              {phase === "preparing"
+                ? "Preparing…"
+                : phase === "warming"
+                  ? warmMessage || "Almost ready…"
+                  : instanceState === "pending"
+                    ? "Setting up…"
+                    : instanceState === "stopping"
+                      ? "Shutting down previous session…"
+                      : "Setting up…"}
             </p>
           </div>
         </div>
@@ -258,12 +260,13 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       return;
     }
 
+    setPhase("preparing");
+    triggerStart().catch(() => {});
+    await new Promise((r) => setTimeout(r, 3_000));
     setPhase("waiting");
     setInstanceState("");
 
     try {
-      triggerStart().catch(() => {});
-
       const publicIp = await pollUntilRunning((state) =>
         setInstanceState(state),
       );
