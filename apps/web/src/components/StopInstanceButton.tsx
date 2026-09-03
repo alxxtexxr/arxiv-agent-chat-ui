@@ -1,19 +1,13 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Loader2, Power, X } from "lucide-react";
-import { clearAccessKey } from "@/lib/access-key";
+import { clearAccessKey, getStoredAccessKey } from "@/lib/access-key";
 import { toast } from "sonner";
 import { TooltipIconButton } from "@/components/thread/tooltip-icon-button";
 import { Button } from "@/components/ui/button";
 
-const INSTANCE_CONTROL_BASE =
-  "https://instance-control-api.alimtegar404.workers.dev/v1/instances/arxiv-agent";
-
-function getApiKeyHeader(): Record<string, string> {
-  const apiKey = import.meta.env.VITE_INSTANCE_CONTROL_API_KEY as
-    string | undefined;
-  return apiKey ? { "X-API-Key": apiKey } : {};
-}
+const INSTANCE_CONTROL_PROXY = import.meta.env
+  .VITE_INSTANCE_CONTROL_PROXY_URL as string;
 
 export function StopInstanceButton() {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -21,19 +15,25 @@ export function StopInstanceButton() {
 
   const handleStop = async () => {
     setStopping(true);
+    const accessKey = getStoredAccessKey() || "";
+    const headers: Record<string, string> = { "X-Access-Key": accessKey };
     try {
-      const res = await fetch(`${INSTANCE_CONTROL_BASE}/stop`, {
-        method: "POST",
-        headers: getApiKeyHeader(),
-      });
+      const res = await fetch(
+        `${INSTANCE_CONTROL_PROXY}?path=/v1/instances/arxiv-agent/stop`,
+        {
+          method: "POST",
+          headers,
+        },
+      );
       if (!res.ok) throw new Error(`Stop returned ${res.status}`);
 
       // Poll until instance is fully stopped
       for (let i = 0; i < 30; i++) {
         await new Promise((r) => setTimeout(r, 3_000));
-        const statusRes = await fetch(`${INSTANCE_CONTROL_BASE}/status`, {
-          headers: getApiKeyHeader(),
-        });
+        const statusRes = await fetch(
+          `${INSTANCE_CONTROL_PROXY}?path=/v1/instances/arxiv-agent/status`,
+          { headers },
+        );
         if (statusRes.ok) {
           const data = await statusRes.json();
           if (data.state === "stopped") break;

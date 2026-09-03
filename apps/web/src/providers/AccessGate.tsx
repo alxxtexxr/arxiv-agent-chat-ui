@@ -5,8 +5,8 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { storeAccessKey } from "@/lib/access-key";
 
-const INSTANCE_CONTROL_BASE =
-  "https://instance-control-api.alimtegar404.workers.dev/v1/instances/arxiv-agent";
+const INSTANCE_CONTROL_PROXY = import.meta.env
+  .VITE_INSTANCE_CONTROL_PROXY_URL as string;
 const STORAGE_KEY = "lg:chat:apiUrl";
 const ASSISTANT_ID_DEFAULT = "agent";
 const BACKEND_PORT = import.meta.env.VITE_BACKEND_PORT || "2024";
@@ -27,31 +27,6 @@ function clearStoredApiUrl() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-function getApiKeyHeader(): Record<string, string> {
-  const apiKey = import.meta.env.VITE_INSTANCE_CONTROL_API_KEY as
-    string | undefined;
-  return apiKey ? { "X-API-Key": apiKey } : {};
-}
-
-function getAllowedKeys(): string[] {
-  const raw = import.meta.env.VITE_ALLOWED_KEYS as string | undefined;
-  const admin = import.meta.env.VITE_ADMIN_KEYS as string | undefined;
-  const keys = new Set<string>();
-  if (raw)
-    raw
-      .split(",")
-      .map((k) => k.trim())
-      .filter(Boolean)
-      .forEach((k) => keys.add(k));
-  if (admin)
-    admin
-      .split(",")
-      .map((k) => k.trim())
-      .filter(Boolean)
-      .forEach((k) => keys.add(k));
-  return [...keys];
-}
-
 function getKeyFromUrl(): string | null {
   const params = new URLSearchParams(window.location.search);
   return params.get("key");
@@ -61,29 +36,44 @@ type StatusResult =
   { state: "running"; publicIp: string } | { state: string; publicIp?: string };
 
 /** Check instance status via the /status endpoint. */
-async function fetchInstanceStatus(): Promise<StatusResult> {
-  const res = await fetch(`${INSTANCE_CONTROL_BASE}/status`, {
-    headers: getApiKeyHeader(),
-  });
+async function fetchInstanceStatus(accessKey: string): Promise<StatusResult> {
+  const headers: Record<string, string> = {
+    "X-Access-Key": accessKey,
+  };
+
+  const res = await fetch(
+    `${INSTANCE_CONTROL_PROXY}?path=/v1/instances/arxiv-agent/status`,
+    {
+      headers,
+    },
+  );
   if (!res.ok) throw new Error(`Status check returned ${res.status}`);
   const data = await res.json();
   return { state: data.state, publicIp: data.publicIp };
 }
 
 /** Fire-and-forget: tell the instance to start. */
-async function triggerStart(): Promise<void> {
-  await fetch(`${INSTANCE_CONTROL_BASE}/start`, {
-    method: "POST",
-    headers: getApiKeyHeader(),
-  });
+async function triggerStart(accessKey: string): Promise<void> {
+  const headers: Record<string, string> = {
+    "X-Access-Key": accessKey,
+  };
+
+  await fetch(
+    `${INSTANCE_CONTROL_PROXY}?path=/v1/instances/arxiv-agent/start`,
+    {
+      method: "POST",
+      headers,
+    },
+  );
 }
 
 /** Poll /status until running or timeout. Returns the public IP. */
 async function pollUntilRunning(
+  accessKey: string,
   onStatus?: (state: string) => void,
 ): Promise<string> {
   for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
-    const result = await fetchInstanceStatus();
+    const result = await fetchInstanceStatus(accessKey);
     onStatus?.(result.state);
 
     if (result.state === "running" && result.publicIp) {
@@ -106,10 +96,11 @@ async function pollUntilRunning(
 
 /** Poll /status until stopped or timeout. */
 async function pollUntilStopped(
+  accessKey: string,
   onStatus?: (state: string) => void,
 ): Promise<void> {
   for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
-    const result = await fetchInstanceStatus();
+    const result = await fetchInstanceStatus(accessKey);
     onStatus?.(result.state);
 
     if (result.state === "stopped") return;
@@ -162,7 +153,7 @@ function usePreStart(keyFromUrl: string | null) {
     if (getStoredApiUrl()) return;
     if (sessionStorage.getItem("prestart-triggered")) return;
     sessionStorage.setItem("prestart-triggered", "1");
-    triggerStart().catch(() => {});
+    triggerStart(keyFromUrl).catch(() => {});
   }, [keyFromUrl]);
 }
 
@@ -192,7 +183,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
     if (!storedUrl) return;
 
     setPhase("checking");
-    fetchInstanceStatus()
+    fetchInstanceStatus(keyFromUrl!)
       .then((result) => {
         if (result.state === "running" && result.publicIp) {
           const freshUrl = `http://${result.publicIp}:${BACKEND_PORT}`;
@@ -275,12 +266,6 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       return;
     }
 
-    const allowed = getAllowedKeys();
-    if (allowed.length > 0 && !allowed.includes(accessKey)) {
-      setError("Invalid access key.");
-      return;
-    }
-
     setPhase("preparing");
     await new Promise((r) => setTimeout(r, 1_500));
     setPhase("waiting");
@@ -288,16 +273,16 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     try {
       // Check current status before doing anything
-      const current = await fetchInstanceStatus();
+      const current = await fetchInstanceStatus(accessKey);
 
       if (current.state === "running" && current.publicIp) {
         // Already running — skip start, go straight to LangGraph check
       } else if (current.state === "stopping") {
         // Wait for it to fully stop, then start it
         setInstanceState("stopping");
-        await pollUntilStopped((state) => setInstanceState(state));
-        triggerStart().catch(() => {});
-        const publicIp = await pollUntilRunning((state) =>
+        await pollUntilStopped(accessKey, (state) => setInstanceState(state));
+        triggerStart(accessKey).catch(() => {});
+        const publicIp = await pollUntilRunning(accessKey, (state) =>
           setInstanceState(state),
         );
         setWarmMessage("Working on it…");
@@ -310,7 +295,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       } else if (current.state === "pending") {
         // Already starting — just wait for it
         setInstanceState("pending");
-        const publicIp = await pollUntilRunning((state) =>
+        const publicIp = await pollUntilRunning(accessKey, (state) =>
           setInstanceState(state),
         );
         setWarmMessage("Working on it…");
@@ -322,8 +307,8 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         return;
       } else {
         // Stopped or unknown — start it
-        triggerStart().catch(() => {});
-        const publicIp = await pollUntilRunning((state) =>
+        triggerStart(accessKey).catch(() => {});
+        const publicIp = await pollUntilRunning(accessKey, (state) =>
           setInstanceState(state),
         );
         setWarmMessage("Working on it…");
