@@ -104,6 +104,30 @@ async function pollUntilRunning(
   throw new Error("Timed out waiting for backend to start");
 }
 
+/** Poll /status until stopped or timeout. */
+async function pollUntilStopped(
+  onStatus?: (state: string) => void,
+): Promise<void> {
+  for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
+    const result = await fetchInstanceStatus();
+    onStatus?.(result.state);
+
+    if (result.state === "stopped") return;
+
+    if (
+      result.state === "terminated" ||
+      result.state === "shutting-down" ||
+      result.state === "terminating"
+    ) {
+      throw new Error(`Instance is ${result.state}`);
+    }
+
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+  }
+
+  throw new Error("Timed out waiting for backend to stop");
+}
+
 /** After instance is running, wait for the LangGraph server to be ready. */
 async function waitForLangGraph(
   publicIp: string,
@@ -258,15 +282,61 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
 
     setPhase("preparing");
-    triggerStart().catch(() => {});
     await new Promise((r) => setTimeout(r, 1_500));
     setPhase("waiting");
     setInstanceState("");
 
     try {
-      const publicIp = await pollUntilRunning((state) =>
-        setInstanceState(state),
-      );
+      // Check current status before doing anything
+      const current = await fetchInstanceStatus();
+
+      if (current.state === "running" && current.publicIp) {
+        // Already running — skip start, go straight to LangGraph check
+      } else if (current.state === "stopping") {
+        // Wait for it to fully stop, then start it
+        setInstanceState("stopping");
+        await pollUntilStopped((state) => setInstanceState(state));
+        triggerStart().catch(() => {});
+        const publicIp = await pollUntilRunning((state) =>
+          setInstanceState(state),
+        );
+        setWarmMessage("Working on it…");
+        setPhase("warming");
+        await waitForLangGraph(publicIp, (msg) => setWarmMessage(msg));
+        storeAccessKey(accessKey);
+        goToChat(publicIp);
+        setUrlKey(null);
+        return;
+      } else if (current.state === "pending") {
+        // Already starting — just wait for it
+        setInstanceState("pending");
+        const publicIp = await pollUntilRunning((state) =>
+          setInstanceState(state),
+        );
+        setWarmMessage("Working on it…");
+        setPhase("warming");
+        await waitForLangGraph(publicIp, (msg) => setWarmMessage(msg));
+        storeAccessKey(accessKey);
+        goToChat(publicIp);
+        setUrlKey(null);
+        return;
+      } else {
+        // Stopped or unknown — start it
+        triggerStart().catch(() => {});
+        const publicIp = await pollUntilRunning((state) =>
+          setInstanceState(state),
+        );
+        setWarmMessage("Working on it…");
+        setPhase("warming");
+        await waitForLangGraph(publicIp, (msg) => setWarmMessage(msg));
+        storeAccessKey(accessKey);
+        goToChat(publicIp);
+        setUrlKey(null);
+        return;
+      }
+
+      // Running — check LangGraph directly
+      const publicIp = current.publicIp!;
 
       setWarmMessage("Working on it…");
       setPhase("warming");
