@@ -195,7 +195,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       <div className="flex items-center justify-center min-h-screen w-full p-4">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">Preparing…</p>
+          <p className="text-muted-foreground">Checking session…</p>
         </div>
       </div>
     );
