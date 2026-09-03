@@ -28,8 +28,8 @@ export function StopInstanceButton() {
       });
       if (!res.ok) throw new Error(`Stop returned ${res.status}`);
 
-      toast.success("Instance stopping", {
-        description: "The backend instance is shutting down.",
+      toast.success("Session ending", {
+        description: "The session is being closed.",
       });
 
       clearAccessKey();
@@ -38,7 +38,7 @@ export function StopInstanceButton() {
 
       setTimeout(() => window.location.reload(), 1000);
     } catch (err: any) {
-      toast.error("Failed to stop instance", {
+      toast.error("Failed to end session", {
         description: err?.message || "Unknown error",
       });
       setStopping(false);
@@ -48,7 +48,7 @@ export function StopInstanceButton() {
   return (
     <>
       <TooltipIconButton
-        tooltip="Stop backend"
+        tooltip="End session"
         size="lg"
         className="p-4"
         onClick={() => setShowConfirm(true)}
@@ -69,7 +69,7 @@ export function StopInstanceButton() {
           >
             <div className="flex flex-row items-center justify-between space-y-0">
               <DialogPrimitive.Title className="text-lg font-semibold">
-                Stop backend instance?
+                End session?
               </DialogPrimitive.Title>
               <DialogPrimitive.Close asChild>
                 <button className="rounded-md p-1.5 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
@@ -79,8 +79,8 @@ export function StopInstanceButton() {
               </DialogPrimitive.Close>
             </div>
             <DialogPrimitive.Description className="text-sm text-muted-foreground">
-              This will shut down the backend server. You'll need to enter your
-              access key again to restart it.
+              This will end your current session. You'll need to enter your
+              access key again to continue.
             </DialogPrimitive.Description>
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
               <DialogPrimitive.Close asChild>
@@ -93,7 +93,7 @@ export function StopInstanceButton() {
                 disabled={stopping}
                 className="bg-rose-600 hover:bg-rose-700 text-white"
               >
-                {stopping ? "Stopping…" : "Stop instance"}
+                {stopping ? "Ending…" : "End session"}
               </Button>
             </div>
           </DialogPrimitive.Content>

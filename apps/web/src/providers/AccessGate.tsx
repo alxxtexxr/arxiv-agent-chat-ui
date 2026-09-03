@@ -111,8 +111,13 @@ async function waitForLangGraph(
   onStatus?: (msg: string) => void,
 ): Promise<void> {
   const url = `http://${publicIp}:${BACKEND_PORT}/info`;
+  const messages = [
+    "Working on it…",
+    "Almost there…",
+    "Just a few more seconds…",
+  ];
 
-  onStatus?.("Starting services…");
+  onStatus?.(messages[0]);
   await new Promise((r) => setTimeout(r, WARMUP_DELAY_MS));
 
   for (let i = 0; i < WARMUP_MAX_ATTEMPTS; i++) {
@@ -122,7 +127,7 @@ async function waitForLangGraph(
     } catch {
       // Server not ready yet — keep polling.
     }
-    onStatus?.("Waiting for services to start…");
+    onStatus?.(messages[Math.min(i + 1, messages.length - 1)]);
     await new Promise((r) => setTimeout(r, WARMUP_POLL_MS));
   }
 
@@ -190,7 +195,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       <div className="flex items-center justify-center min-h-screen w-full p-4">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">Checking backend status…</p>
+          <p className="text-muted-foreground">Preparing…</p>
         </div>
       </div>
     );
@@ -208,21 +213,19 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
               </h1>
             </div>
             <p className="text-muted-foreground">
-              {phase === "warming"
-                ? "Backend is starting up. Almost ready…"
-                : "Starting the backend instance. This may take a minute…"}
+              Setting up your session. This usually takes about a minute.
             </p>
           </div>
           <div className="flex flex-col items-center gap-4 p-10 bg-muted/50">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
               {phase === "warming"
-                ? warmMessage || "Waiting for services…"
+                ? warmMessage || "Almost ready…"
                 : instanceState === "pending"
-                  ? "Instance is booting up…"
+                  ? "Setting up…"
                   : instanceState === "stopping"
-                    ? "Previous instance is shutting down…"
-                    : `Instance state: ${instanceState || "unknown"}…`}
+                    ? "Shutting down previous session…"
+                    : "Setting up…"}
             </p>
           </div>
         </div>
@@ -266,7 +269,6 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       );
 
       setPhase("warming");
-      setWarmMessage("Starting services…");
       await waitForLangGraph(publicIp, (msg) => setWarmMessage(msg));
 
       storeAccessKey(accessKey);
@@ -290,7 +292,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
             </h1>
           </div>
           <p className="text-muted-foreground">
-            Enter your access key to continue.
+            Enter your access key to set up your session.
           </p>
         </div>
         <form
