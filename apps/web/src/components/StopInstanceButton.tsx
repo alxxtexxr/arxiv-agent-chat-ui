@@ -17,22 +17,18 @@ export function StopInstanceButton() {
     const accessKey = getStoredAccessKey() || "";
     const headers: Record<string, string> = { "X-Access-Key": accessKey };
     try {
-      const res = await fetch(
-        `${PROXY_URL}?path=/v1/instances/arxiv-agent/stop`,
-        {
-          method: "POST",
-          headers,
-        },
-      );
+      const res = await fetch(`${PROXY_URL}/instance/stop`, {
+        method: "POST",
+        headers,
+      });
       if (!res.ok) throw new Error(`Stop returned ${res.status}`);
 
       // Poll until instance is fully stopped
       for (let i = 0; i < 30; i++) {
         await new Promise((r) => setTimeout(r, 3_000));
-        const statusRes = await fetch(
-          `${PROXY_URL}?path=/v1/instances/arxiv-agent/status`,
-          { headers },
-        );
+        const statusRes = await fetch(`${PROXY_URL}/instance/status`, {
+          headers,
+        });
         if (statusRes.ok) {
           const data = await statusRes.json();
           if (data.state === "stopped") break;

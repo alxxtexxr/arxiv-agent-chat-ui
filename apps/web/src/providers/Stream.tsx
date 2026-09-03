@@ -24,6 +24,8 @@ import { toast } from "sonner";
 
 export type StateType = { messages: Message[]; ui?: UIMessage[] };
 
+const BACKEND_PORT = import.meta.env.VITE_BACKEND_PORT || "2024";
+
 const useTypedStream = useStream<
   StateType,
   {
@@ -45,8 +47,19 @@ async function sleep(ms = 4000) {
 async function checkGraphStatus(
   apiUrl: string,
   apiKey: string | null,
+  host?: string | null,
+  proxyUrl?: string,
 ): Promise<boolean> {
   try {
+    if (host && proxyUrl) {
+      const res = await fetch(
+        `${proxyUrl}/langgraph?host=${host}:${BACKEND_PORT}/info`,
+        {
+          headers: { "X-Access-Key": apiKey || "" },
+        },
+      );
+      return res.ok;
+    }
     const res = await fetch(`${apiUrl}/info`, {
       ...(apiKey && {
         headers: {
@@ -54,7 +67,6 @@ async function checkGraphStatus(
         },
       }),
     });
-
     return res.ok;
   } catch (e) {
     console.error(e);
@@ -94,8 +106,11 @@ const StreamSession = ({
     },
   });
 
+  const host = localStorage.getItem("lg:chat:host");
+  const proxyUrl = import.meta.env.VITE_PROXY_URL as string;
+
   useEffect(() => {
-    checkGraphStatus(apiUrl, apiKey).then((ok) => {
+    checkGraphStatus(apiUrl, apiKey, host, proxyUrl).then((ok) => {
       if (!ok) {
         toast.error("Failed to connect to LangGraph server", {
           description: () => (
@@ -151,10 +166,27 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   // Determine final values to use, prioritizing URL params, env vars, then localStorage
-  const storedApiUrl = localStorage.getItem("lg:chat:apiUrl");
   const storedAssistantId = localStorage.getItem("lg:chat:assistantId");
-  const finalApiUrl = apiUrl || envApiUrl || storedApiUrl;
+  const storedHost = localStorage.getItem("lg:chat:host");
+  const proxyUrl = import.meta.env.VITE_PROXY_URL as string;
+
+  // Build the LangGraph API URL: either direct or through proxy
+  const backendPort = import.meta.env.VITE_BACKEND_PORT || "2024";
+  let finalApiUrl = apiUrl || envApiUrl;
+  let usingProxy = false;
+  if (!finalApiUrl && storedHost && proxyUrl) {
+    // Route through proxy to avoid mixed content (HTTPS frontend → HTTP backend).
+    // The SDK concatenates `${apiUrl}${path}`, so the backend path lands inside
+    // the `host` param — the proxy splits it back out.
+    finalApiUrl = `${proxyUrl}/langgraph?host=${storedHost}:${backendPort}`;
+    usingProxy = true;
+  }
   const finalAssistantId = assistantId || envAssistantId || storedAssistantId;
+
+  // In proxy mode the SDK must send the access key (it uses the X-Api-Key header)
+  const effectiveApiKey = usingProxy
+    ? localStorage.getItem("lg:chat:accessKey") || ""
+    : apiKey;
 
   // If we're missing any required values, show the form
   if (!finalApiUrl || !finalAssistantId) {
@@ -256,7 +288,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
 
   return (
     <StreamSession
-      apiKey={apiKey}
+      apiKey={effectiveApiKey}
       apiUrl={finalApiUrl}
       assistantId={finalAssistantId}
     >

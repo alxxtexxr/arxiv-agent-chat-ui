@@ -14,16 +14,14 @@ const MAX_POLL_ATTEMPTS = 60; // 5 min max
 const WARMUP_POLL_MS = 7_500;
 const WARMUP_MAX_ATTEMPTS = 30; // 90s max for services to start
 
+/** Convert EC2 public IP to its public DNS hostname. */
+function ipToHostname(ip: string): string {
+  const region = import.meta.env.VITE_AWS_REGION || "ap-southeast-1";
+  return `ec2-${ip.replace(/\./g, "-")}.${region}.compute.amazonaws.com`;
+}
+
 function getStoredApiUrl(): string | null {
   return localStorage.getItem(STORAGE_KEY);
-}
-
-function setStoredApiUrl(url: string) {
-  localStorage.setItem(STORAGE_KEY, url);
-}
-
-function clearStoredApiUrl() {
-  localStorage.removeItem(STORAGE_KEY);
 }
 
 function getKeyFromUrl(): string | null {
@@ -40,12 +38,9 @@ async function fetchInstanceStatus(accessKey: string): Promise<StatusResult> {
     "X-Access-Key": accessKey,
   };
 
-  const res = await fetch(
-    `${PROXY_URL}?path=/v1/instances/arxiv-agent/status`,
-    {
-      headers,
-    },
-  );
+  const res = await fetch(`${PROXY_URL}/instance/status`, {
+    headers,
+  });
   if (!res.ok) throw new Error(`Status check returned ${res.status}`);
   const data = await res.json();
   return { state: data.state, publicIp: data.publicIp };
@@ -57,7 +52,7 @@ async function triggerStart(accessKey: string): Promise<void> {
     "X-Access-Key": accessKey,
   };
 
-  await fetch(`${PROXY_URL}?path=/v1/instances/arxiv-agent/start`, {
+  await fetch(`${PROXY_URL}/instance/start`, {
     method: "POST",
     headers,
   });
@@ -118,9 +113,11 @@ async function pollUntilStopped(
 /** After instance is running, wait for the LangGraph server to be ready. */
 async function waitForLangGraph(
   publicIp: string,
+  accessKey: string,
   onStatus?: (msg: string) => void,
 ): Promise<void> {
-  const url = `http://${publicIp}:${BACKEND_PORT}/info`;
+  // Poll through the proxy — direct HTTP would be blocked (mixed content)
+  const url = `${PROXY_URL}/langgraph?host=${ipToHostname(publicIp)}:${BACKEND_PORT}/info`;
   const messages = [
     "Working on it…",
     "Still setting up…",
@@ -130,7 +127,10 @@ async function waitForLangGraph(
 
   for (let i = 0; i < WARMUP_MAX_ATTEMPTS; i++) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5_000) });
+      const res = await fetch(url, {
+        headers: { "X-Access-Key": accessKey },
+        signal: AbortSignal.timeout(5_000),
+      });
       if (res.ok) return;
     } catch {
       // Server not ready yet — keep polling.
@@ -168,9 +168,9 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
   usePreStart(keyFromUrl);
 
   const goToChat = useCallback((ip: string) => {
-    const url = `http://${ip}:${BACKEND_PORT}`;
-    setStoredApiUrl(url);
-    setStoredUrl(url);
+    const hostname = ipToHostname(ip);
+    localStorage.setItem("lg:chat:host", hostname);
+    setStoredUrl("proxy");
     setPhase("idle");
   }, []);
 
@@ -182,16 +182,15 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
     fetchInstanceStatus(keyFromUrl!)
       .then((result) => {
         if (result.state === "running" && result.publicIp) {
-          const freshUrl = `http://${result.publicIp}:${BACKEND_PORT}`;
-          setStoredApiUrl(freshUrl);
-          setStoredUrl(freshUrl);
+          localStorage.setItem("lg:chat:host", ipToHostname(result.publicIp!));
+          setStoredUrl("proxy");
         } else {
-          clearStoredApiUrl();
+          localStorage.removeItem("lg:chat:host");
           setStoredUrl(null);
         }
       })
       .catch(() => {
-        clearStoredApiUrl();
+        localStorage.removeItem("lg:chat:host");
         setStoredUrl(null);
       })
       .finally(() => setPhase("idle"));
@@ -283,7 +282,9 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         );
         setWarmMessage("Working on it…");
         setPhase("warming");
-        await waitForLangGraph(publicIp, (msg) => setWarmMessage(msg));
+        await waitForLangGraph(publicIp, accessKey, (msg) =>
+          setWarmMessage(msg),
+        );
         storeAccessKey(accessKey);
         goToChat(publicIp);
         setUrlKey(null);
@@ -296,7 +297,9 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         );
         setWarmMessage("Working on it…");
         setPhase("warming");
-        await waitForLangGraph(publicIp, (msg) => setWarmMessage(msg));
+        await waitForLangGraph(publicIp, accessKey, (msg) =>
+          setWarmMessage(msg),
+        );
         storeAccessKey(accessKey);
         goToChat(publicIp);
         setUrlKey(null);
@@ -309,7 +312,9 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         );
         setWarmMessage("Working on it…");
         setPhase("warming");
-        await waitForLangGraph(publicIp, (msg) => setWarmMessage(msg));
+        await waitForLangGraph(publicIp, accessKey, (msg) =>
+          setWarmMessage(msg),
+        );
         storeAccessKey(accessKey);
         goToChat(publicIp);
         setUrlKey(null);
@@ -321,7 +326,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
 
       setWarmMessage("Working on it…");
       setPhase("warming");
-      await waitForLangGraph(publicIp, (msg) => setWarmMessage(msg));
+      await waitForLangGraph(publicIp, accessKey, (msg) => setWarmMessage(msg));
 
       storeAccessKey(accessKey);
       goToChat(publicIp);
