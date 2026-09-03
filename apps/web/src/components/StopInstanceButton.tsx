@@ -6,8 +6,7 @@ import { toast } from "sonner";
 import { TooltipIconButton } from "@/components/thread/tooltip-icon-button";
 import { Button } from "@/components/ui/button";
 
-const INSTANCE_CONTROL_PROXY = import.meta.env
-  .VITE_INSTANCE_CONTROL_PROXY_URL as string;
+const PROXY_URL = import.meta.env.VITE_PROXY_URL as string;
 
 export function StopInstanceButton() {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -19,7 +18,7 @@ export function StopInstanceButton() {
     const headers: Record<string, string> = { "X-Access-Key": accessKey };
     try {
       const res = await fetch(
-        `${INSTANCE_CONTROL_PROXY}?path=/v1/instances/arxiv-agent/stop`,
+        `${PROXY_URL}?path=/v1/instances/arxiv-agent/stop`,
         {
           method: "POST",
           headers,
@@ -31,7 +30,7 @@ export function StopInstanceButton() {
       for (let i = 0; i < 30; i++) {
         await new Promise((r) => setTimeout(r, 3_000));
         const statusRes = await fetch(
-          `${INSTANCE_CONTROL_PROXY}?path=/v1/instances/arxiv-agent/status`,
+          `${PROXY_URL}?path=/v1/instances/arxiv-agent/status`,
           { headers },
         );
         if (statusRes.ok) {

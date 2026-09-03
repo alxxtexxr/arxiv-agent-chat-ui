@@ -5,8 +5,7 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { storeAccessKey } from "@/lib/access-key";
 
-const INSTANCE_CONTROL_PROXY = import.meta.env
-  .VITE_INSTANCE_CONTROL_PROXY_URL as string;
+const PROXY_URL = import.meta.env.VITE_PROXY_URL as string;
 const STORAGE_KEY = "lg:chat:apiUrl";
 const ASSISTANT_ID_DEFAULT = "agent";
 const BACKEND_PORT = import.meta.env.VITE_BACKEND_PORT || "2024";
@@ -42,7 +41,7 @@ async function fetchInstanceStatus(accessKey: string): Promise<StatusResult> {
   };
 
   const res = await fetch(
-    `${INSTANCE_CONTROL_PROXY}?path=/v1/instances/arxiv-agent/status`,
+    `${PROXY_URL}?path=/v1/instances/arxiv-agent/status`,
     {
       headers,
     },
@@ -58,13 +57,10 @@ async function triggerStart(accessKey: string): Promise<void> {
     "X-Access-Key": accessKey,
   };
 
-  await fetch(
-    `${INSTANCE_CONTROL_PROXY}?path=/v1/instances/arxiv-agent/start`,
-    {
-      method: "POST",
-      headers,
-    },
-  );
+  await fetch(`${PROXY_URL}?path=/v1/instances/arxiv-agent/start`, {
+    method: "POST",
+    headers,
+  });
 }
 
 /** Poll /status until running or timeout. Returns the public IP. */
