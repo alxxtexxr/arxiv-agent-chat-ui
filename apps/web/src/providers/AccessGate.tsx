@@ -12,8 +12,7 @@ const ASSISTANT_ID_DEFAULT = "agent";
 const BACKEND_PORT = import.meta.env.VITE_BACKEND_PORT || "2024";
 const POLL_INTERVAL_MS = 5_000;
 const MAX_POLL_ATTEMPTS = 60; // 5 min max
-const WARMUP_DELAY_MS = 5_000; // wait for systemd services after instance runs
-const WARMUP_POLL_MS = 20_000;
+const WARMUP_POLL_MS = 7_500;
 const WARMUP_MAX_ATTEMPTS = 30; // 90s max for services to start
 
 function getStoredApiUrl(): string | null {
@@ -113,12 +112,10 @@ async function waitForLangGraph(
   const url = `http://${publicIp}:${BACKEND_PORT}/info`;
   const messages = [
     "Working on it…",
+    "Still setting up…",
     "Almost there…",
     "Just a few more seconds…",
   ];
-
-  onStatus?.(messages[0]);
-  await new Promise((r) => setTimeout(r, WARMUP_DELAY_MS));
 
   for (let i = 0; i < WARMUP_MAX_ATTEMPTS; i++) {
     try {
@@ -262,7 +259,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     setPhase("preparing");
     triggerStart().catch(() => {});
-    await new Promise((r) => setTimeout(r, 3_000));
+    await new Promise((r) => setTimeout(r, 1_500));
     setPhase("waiting");
     setInstanceState("");
 
@@ -271,6 +268,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         setInstanceState(state),
       );
 
+      setWarmMessage("Working on it…");
       setPhase("warming");
       await waitForLangGraph(publicIp, (msg) => setWarmMessage(msg));
 
