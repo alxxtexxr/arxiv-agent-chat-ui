@@ -28,15 +28,23 @@ export function StopInstanceButton() {
       });
       if (!res.ok) throw new Error(`Stop returned ${res.status}`);
 
-      toast.success("Session ending", {
-        description: "The session is being closed.",
-      });
+      // Poll until instance is fully stopped
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 3_000));
+        const statusRes = await fetch(`${INSTANCE_CONTROL_BASE}/status`, {
+          headers: getApiKeyHeader(),
+        });
+        if (statusRes.ok) {
+          const data = await statusRes.json();
+          if (data.state === "stopped") break;
+        }
+      }
 
       clearAccessKey();
       localStorage.removeItem("lg:chat:apiUrl");
       localStorage.removeItem("lg:chat:assistantId");
 
-      setTimeout(() => window.location.reload(), 1000);
+      window.location.reload();
     } catch (err: any) {
       toast.error("Failed to end session", {
         description: err?.message || "Unknown error",
