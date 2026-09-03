@@ -44,7 +44,12 @@ export function StopInstanceButton() {
       localStorage.removeItem("lg:chat:apiUrl");
       localStorage.removeItem("lg:chat:assistantId");
 
-      window.location.reload();
+      const params = new URLSearchParams(window.location.search);
+      params.delete("threadId");
+      const search = params.toString();
+      window.location.replace(
+        window.location.pathname + (search ? `?${search}` : ""),
+      );
     } catch (err: any) {
       toast.error("Failed to end session", {
         description: err?.message || "Unknown error",
