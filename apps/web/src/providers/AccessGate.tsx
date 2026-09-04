@@ -3,10 +3,14 @@ import { useQueryState } from "nuqs";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { storeAccessKey } from "@/lib/access-key";
+import {
+  storeAccessKey,
+  checkAdminStatus,
+  isAdminKey,
+  getStoredAccessKey,
+} from "@/lib/access-key";
 
 const PROXY_URL = import.meta.env.VITE_PROXY_URL as string;
-const STORAGE_KEY = "lg:chat:apiUrl";
 const ASSISTANT_ID_DEFAULT = "agent";
 const BACKEND_PORT = import.meta.env.VITE_BACKEND_PORT || "2024";
 const POLL_INTERVAL_MS = 5_000;
@@ -21,7 +25,7 @@ function ipToHostname(ip: string): string {
 }
 
 function getStoredApiUrl(): string | null {
-  return localStorage.getItem(STORAGE_KEY);
+  return localStorage.getItem("lg:chat:host");
 }
 
 function getKeyFromUrl(): string | null {
@@ -179,7 +183,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
     if (!storedUrl) return;
 
     setPhase("checking");
-    fetchInstanceStatus(keyFromUrl!)
+    fetchInstanceStatus(getStoredAccessKey() || keyFromUrl || "")
       .then((result) => {
         if (result.state === "running" && result.publicIp) {
           localStorage.setItem("lg:chat:host", ipToHostname(result.publicIp!));
@@ -245,6 +249,10 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
   // If we have a valid stored URL, skip the gate
   if (storedUrl) {
     localStorage.setItem("lg:chat:assistantId", ASSISTANT_ID_DEFAULT);
+    // Check admin status on mount if not yet cached
+    if (!isAdminKey() && localStorage.getItem("lg:chat:accessKey")) {
+      checkAdminStatus();
+    }
     return <>{children}</>;
   }
 
@@ -286,6 +294,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
           setWarmMessage(msg),
         );
         storeAccessKey(accessKey);
+        checkAdminStatus();
         goToChat(publicIp);
         setUrlKey(null);
         return;
@@ -301,6 +310,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
           setWarmMessage(msg),
         );
         storeAccessKey(accessKey);
+        checkAdminStatus();
         goToChat(publicIp);
         setUrlKey(null);
         return;
@@ -329,6 +339,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       await waitForLangGraph(publicIp, accessKey, (msg) => setWarmMessage(msg));
 
       storeAccessKey(accessKey);
+      checkAdminStatus();
       goToChat(publicIp);
       setUrlKey(null);
     } catch (err: any) {

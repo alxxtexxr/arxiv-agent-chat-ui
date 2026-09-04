@@ -20,7 +20,6 @@ import { ArrowRight } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { getApiKey } from "@/lib/api-key";
 import { useThreads } from "./Thread";
-import { toast } from "sonner";
 
 export type StateType = { messages: Message[]; ui?: UIMessage[] };
 
@@ -110,21 +109,7 @@ const StreamSession = ({
   const proxyUrl = import.meta.env.VITE_PROXY_URL as string;
 
   useEffect(() => {
-    checkGraphStatus(apiUrl, apiKey, host, proxyUrl).then((ok) => {
-      if (!ok) {
-        toast.error("Failed to connect to LangGraph server", {
-          description: () => (
-            <p>
-              Please ensure your graph is running at <code>{apiUrl}</code> and
-              your API key is correctly set (if connecting to a deployed graph).
-            </p>
-          ),
-          duration: 10000,
-          richColors: true,
-          closeButton: true,
-        });
-      }
-    });
+    checkGraphStatus(apiUrl, apiKey, host, proxyUrl).catch(() => {});
   }, [apiKey, apiUrl]);
 
   return (

@@ -13,16 +13,30 @@ export function clearAccessKey() {
 }
 
 export function isAdminKey(): boolean {
-  const stored = getStoredAccessKey();
-  if (!stored) return false;
+  // Check locally cached admin status (set by checkAdminStatus)
+  return localStorage.getItem("lg:chat:isAdmin") === "true";
+}
 
-  const raw = import.meta.env.VITE_ADMIN_KEYS as string | undefined;
-  if (!raw) return false;
+const PROXY_URL = import.meta.env.VITE_PROXY_URL as string;
 
-  const adminKeys = raw
-    .split(",")
-    .map((k) => k.trim())
-    .filter(Boolean);
-
-  return adminKeys.includes(stored);
+/** Call proxy /auth/check to validate the stored key and cache admin status. */
+export async function checkAdminStatus(): Promise<void> {
+  const key = getStoredAccessKey();
+  if (!key) {
+    localStorage.removeItem("lg:chat:isAdmin");
+    return;
+  }
+  try {
+    const res = await fetch(`${PROXY_URL}/auth/check`, {
+      headers: { "X-Access-Key": key },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem("lg:chat:isAdmin", String(data.admin));
+    } else {
+      localStorage.removeItem("lg:chat:isAdmin");
+    }
+  } catch {
+    localStorage.removeItem("lg:chat:isAdmin");
+  }
 }
