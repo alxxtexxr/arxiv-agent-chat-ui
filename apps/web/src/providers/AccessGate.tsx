@@ -18,12 +18,6 @@ const MAX_POLL_ATTEMPTS = 60; // 5 min max
 const WARMUP_POLL_MS = 7_500;
 const WARMUP_MAX_ATTEMPTS = 30; // 90s max for services to start
 
-/** Convert EC2 public IP to its public DNS hostname. */
-function ipToHostname(ip: string): string {
-  const region = import.meta.env.VITE_AWS_REGION || "ap-southeast-1";
-  return `ec2-${ip.replace(/\./g, "-")}.${region}.compute.amazonaws.com`;
-}
-
 function getStoredApiUrl(): string | null {
   return localStorage.getItem("lg:chat:host");
 }
@@ -34,7 +28,8 @@ function getKeyFromUrl(): string | null {
 }
 
 type StatusResult =
-  { state: "running"; publicIp: string } | { state: string; publicIp?: string };
+  | { state: "running"; publicIp: string; hostname?: string }
+  | { state: string; publicIp?: string; hostname?: string };
 
 /** Check instance status via the /status endpoint. */
 async function fetchInstanceStatus(accessKey: string): Promise<StatusResult> {
@@ -116,12 +111,12 @@ async function pollUntilStopped(
 
 /** After instance is running, wait for the LangGraph server to be ready. */
 async function waitForLangGraph(
-  publicIp: string,
+  host: string,
   accessKey: string,
   onStatus?: (msg: string) => void,
 ): Promise<void> {
   // Poll through the proxy — direct HTTP would be blocked (mixed content)
-  const url = `${PROXY_URL}/langgraph?host=${ipToHostname(publicIp)}:${BACKEND_PORT}/info`;
+  const url = `${PROXY_URL}/langgraph?host=${host}:${BACKEND_PORT}/info`;
   const messages = [
     "Working on it…",
     "Still setting up…",
@@ -171,9 +166,8 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   usePreStart(keyFromUrl);
 
-  const goToChat = useCallback((ip: string) => {
-    const hostname = ipToHostname(ip);
-    localStorage.setItem("lg:chat:host", hostname);
+  const goToChat = useCallback((host: string) => {
+    localStorage.setItem("lg:chat:host", host);
     setStoredUrl("proxy");
     setPhase("idle");
   }, []);
@@ -186,7 +180,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
     fetchInstanceStatus(getStoredAccessKey() || keyFromUrl || "")
       .then((result) => {
         if (result.state === "running" && result.publicIp) {
-          localStorage.setItem("lg:chat:host", ipToHostname(result.publicIp!));
+          localStorage.setItem("lg:chat:host", result.hostname || "");
           setStoredUrl("proxy");
         } else {
           localStorage.removeItem("lg:chat:host");
@@ -288,9 +282,11 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         const publicIp = await pollUntilRunning(accessKey, (state) =>
           setInstanceState(state),
         );
+        const status = await fetchInstanceStatus(accessKey);
+        const hostname = status.hostname || publicIp;
         setWarmMessage("Working on it…");
         setPhase("warming");
-        await waitForLangGraph(publicIp, accessKey, (msg) =>
+        await waitForLangGraph(hostname, accessKey, (msg) =>
           setWarmMessage(msg),
         );
         storeAccessKey(accessKey);
@@ -304,9 +300,11 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         const publicIp = await pollUntilRunning(accessKey, (state) =>
           setInstanceState(state),
         );
+        const status = await fetchInstanceStatus(accessKey);
+        const hostname = status.hostname || publicIp;
         setWarmMessage("Working on it…");
         setPhase("warming");
-        await waitForLangGraph(publicIp, accessKey, (msg) =>
+        await waitForLangGraph(hostname, accessKey, (msg) =>
           setWarmMessage(msg),
         );
         storeAccessKey(accessKey);
@@ -320,9 +318,11 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         const publicIp = await pollUntilRunning(accessKey, (state) =>
           setInstanceState(state),
         );
+        const status = await fetchInstanceStatus(accessKey);
+        const hostname = status.hostname || publicIp;
         setWarmMessage("Working on it…");
         setPhase("warming");
-        await waitForLangGraph(publicIp, accessKey, (msg) =>
+        await waitForLangGraph(hostname, accessKey, (msg) =>
           setWarmMessage(msg),
         );
         storeAccessKey(accessKey);
@@ -332,15 +332,14 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
       }
 
       // Running — check LangGraph directly
-      const publicIp = current.publicIp!;
-
+      const hostname = current.hostname || "";
       setWarmMessage("Working on it…");
       setPhase("warming");
-      await waitForLangGraph(publicIp, accessKey, (msg) => setWarmMessage(msg));
+      await waitForLangGraph(hostname, accessKey, (msg) => setWarmMessage(msg));
 
       storeAccessKey(accessKey);
       checkAdminStatus();
-      goToChat(publicIp);
+      goToChat(current.publicIp!);
       setUrlKey(null);
     } catch (err: any) {
       setError(err?.message || "Failed to start the backend. Try again.");
