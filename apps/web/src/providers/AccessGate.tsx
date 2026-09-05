@@ -42,7 +42,11 @@ async function fetchInstanceStatus(accessKey: string): Promise<StatusResult> {
   });
   if (!res.ok) throw new Error(`Status check returned ${res.status}`);
   const data = await res.json();
-  return { state: data.state, publicIp: data.publicIp };
+  return {
+    state: data.state,
+    publicIp: data.publicIp,
+    hostname: data.hostname,
+  };
 }
 
 /** Fire-and-forget: tell the instance to start. */
@@ -291,7 +295,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         );
         storeAccessKey(accessKey);
         checkAdminStatus();
-        goToChat(publicIp);
+        goToChat(hostname);
         setUrlKey(null);
         return;
       } else if (current.state === "pending") {
@@ -309,7 +313,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
         );
         storeAccessKey(accessKey);
         checkAdminStatus();
-        goToChat(publicIp);
+        goToChat(hostname);
         setUrlKey(null);
         return;
       } else {
@@ -326,7 +330,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
           setWarmMessage(msg),
         );
         storeAccessKey(accessKey);
-        goToChat(publicIp);
+        goToChat(hostname);
         setUrlKey(null);
         return;
       }
@@ -339,7 +343,7 @@ export const AccessGate: React.FC<{ children: ReactNode }> = ({ children }) => {
 
       storeAccessKey(accessKey);
       checkAdminStatus();
-      goToChat(current.publicIp!);
+      goToChat(current.hostname || "");
       setUrlKey(null);
     } catch (err: any) {
       setError(err?.message || "Failed to start the backend. Try again.");
